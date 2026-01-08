@@ -1,24 +1,24 @@
-name: 
+name:
 recipe: wordpress
 config:
-  php: '8.3'
-  via: apache
-  composer_version: '2'
-  webroot: .
-  database: mysql
+    php: "8.4"
+    via: apache
+    composer_version: "2"
+    webroot: .
+    database: mysql
 
 services:
-  appserver:
-    type: php:8.3
-    via: apache
-    webroot: .
-    ssl: true
-   
-  mailhog:
-    type: mailhog
-    hogfrom:
-      - appserver
-  pma:
-    type: phpmyadmin
-    hosts:
-      - database
+    appserver:
+        type: php:8.4
+        via: apache
+        webroot: .
+        ssl: true
+
+    mailhog:
+        type: mailhog
+        hogfrom:
+            - appserver
+    pma:
+        type: phpmyadmin
+        hosts:
+            - database

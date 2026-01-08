@@ -38,7 +38,7 @@ For more details, visit the [official documentation](https://docs.lando.dev/gett
 Run the installation script directly from the repository:
 
 ```sh
-wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh _wp
+wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh wp_
 ```
 
 Ensure that the project folder contains only `db/` and `db/db.sql` before running the script.
@@ -46,10 +46,10 @@ Ensure that the project folder contains only `db/` and `db/db.sql` before runnin
 Run the installation script:
 
 ```sh
-./install/install.sh _wp
+./install/install.sh wp_
 ```
 
-If no `DB_PREFIX` is provided, the script will use `_wp` as the default.
+If no `DB_PREFIX` is provided, the script will use `wp_` as the default.
 
 ## What the Script Does
 
@@ -102,12 +102,12 @@ Para mais detalhes, visite a [documentação oficial](https://docs.lando.dev/get
 Execute o script de instalação diretamente do repositório:
 
 ```sh
-wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh _wp
+wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh wp_
 ```
 
 Certifique-se de que a pasta do projeto contém apenas `db/` e `db/db.sql` antes de rodar o script.
 
-Se nenhum `DB_PREFIX` for fornecido, o script usará `_wp` como padrão.
+Se nenhum `DB_PREFIX` for fornecido, o script usará `wp_` como padrão.
 
 ## O que o script faz
 

@@ -1,86 +1,135 @@
 #!/bin/zsh
 
-# Define o repositório e a branch correta
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
+# Symbols
+CHECK="✓"
+CROSS="✗"
+ARROW="➜"
+STAR="★"
+
+# Repository and files configuration
 REPO_URL="https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main"
 FILES=(".env" ".lando.yml" "composer.json" "wp-config.php")
 
-# Baixa os arquivos necessários
+# Print header
+clear
+echo ""
+echo "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
+echo "${CYAN}║${WHITE}     WordPress Automated Setup with Lando ${STAR}               ${CYAN}║${NC}"
+echo "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+# Download required files
+echo "${BLUE}[1/7]${NC} ${WHITE}Downloading configuration files...${NC}"
 for file in "${FILES[@]}"; do
     if [ ! -f "$file" ]; then
-        echo "Baixando $file..."
+        echo -n "  ${ARROW} Downloading ${YELLOW}$file${NC}..."
         wget -q "$REPO_URL/$file" -O "$file"
         
-        # Verifica se o arquivo foi baixado corretamente
         if [ ! -s "$file" ]; then
-            echo "Erro: O arquivo $file não foi baixado corretamente!"
-            rm -f "$file"  # Remove o arquivo vazio
+            echo " ${RED}${CROSS} FAILED${NC}"
+            echo "${RED}Error: File $file could not be downloaded!${NC}"
+            rm -f "$file"
             exit 1
         fi
+        echo " ${GREEN}${CHECK} Done${NC}"
+    else
+        echo "  ${YELLOW}⊙${NC} File ${YELLOW}$file${NC} already exists, skipping..."
     fi
 done
+echo ""
 
-# Define DB_PREFIX, assumindo "wp_" como padrão caso não seja passado um argumento
+# Set database prefix (default: wp_)
 DB_PREFIX="${1:-wp_}"
 
-# Define o diretório de instalação
+# Directory configuration
 INSTALL_DIR="$(dirname "$0")"
-
-# Define o diretório de destino como o diretório atual
 DEST_DIR="$(pwd)"
-
-# Obtém o nome da pasta do projeto (última parte do caminho)
 PROJECT_NAME="$(basename "$DEST_DIR")"
 
 # Define URLs
 WP_HOME="https://${PROJECT_NAME}.lndo.site"
 WP_SITEURL="https://${PROJECT_NAME}.lndo.site"
 
-# Copia os arquivos apenas se não existirem no destino
+# Copy files if they don't exist in destination
+echo "${BLUE}[2/7]${NC} ${WHITE}Preparing configuration files...${NC}"
 for file in ".env" ".lando.yml" "composer.json" "wp-config.php"; do
     if [ ! -f "$DEST_DIR/$file" ]; then
-        echo "Copiando $file..."
+        echo "  ${ARROW} Copying ${YELLOW}$file${NC}..."
         cp "$INSTALL_DIR/$file" "$DEST_DIR"
     else
-        echo "Ignorando $file, já existe no destino."
+        echo "  ${YELLOW}⊙${NC} Skipping ${YELLOW}$file${NC}, already exists"
     fi
 done
+echo ""
 
-# Atualiza o arquivo .env com os novos valores
+# Update .env file
+echo "${BLUE}[3/7]${NC} ${WHITE}Configuring environment variables...${NC}"
 sed -i "s|DB_PREFIX =.*|DB_PREFIX = \"$DB_PREFIX\"|" "$DEST_DIR/.env"
 sed -i "s|WP_HOME =.*|WP_HOME = \"$WP_HOME\"|" "$DEST_DIR/.env"
 sed -i "s|WP_SITEURL =.*|WP_SITEURL = \"$WP_SITEURL\"|" "$DEST_DIR/.env"
 
-# Atualiza o campo "name" no .lando.yml
+# Update .lando.yml
 sed -i "1s|^name:.*|name: $PROJECT_NAME|" "$DEST_DIR/.lando.yml"
 
-echo "Arquivos copiados e atualizados:"
-echo "- .env atualizado com DB_PREFIX, WP_HOME e WP_SITEURL"
-echo "- .lando.yml atualizado com name: $PROJECT_NAME"
-echo "- DB_PREFIX = $DB_PREFIX"
-echo "- WP_HOME = $WP_HOME"
-echo "- WP_SITEURL = $WP_SITEURL"
+echo "  ${GREEN}${CHECK}${NC} Project Name: ${CYAN}$PROJECT_NAME${NC}"
+echo "  ${GREEN}${CHECK}${NC} DB Prefix: ${CYAN}$DB_PREFIX${NC}"
+echo "  ${GREEN}${CHECK}${NC} Site URL: ${CYAN}$WP_HOME${NC}"
+echo ""
 
-# Inicia o ambiente Lando
-echo "Iniciando o ambiente Lando..."
+# Start Lando environment
+echo "${BLUE}[4/7]${NC} ${WHITE}Starting Lando environment...${NC}"
+echo "  ${ARROW} This may take a few minutes on first run"
 lando start
+echo ""
 
-# Instala as dependências do Composer
-echo "Instalando dependências do Composer..."
+# Install Composer dependencies
+echo "${BLUE}[5/7]${NC} ${WHITE}Installing Composer dependencies...${NC}"
 lando composer install
+echo ""
 
-# Baixa o WordPress
-echo "Baixando o WordPress..."
+# Download WordPress
+echo "${BLUE}[6/7]${NC} ${WHITE}Downloading WordPress core...${NC}"
 lando wp core download --allow-root
+echo ""
 
-# Importa o banco de dados, se existir
+# Import database if exists
 DB_FILE="db/db.sql"
+echo "${BLUE}[7/7]${NC} ${WHITE}Checking for database import...${NC}"
 
 if [ -f "$DB_FILE" ]; then
-    echo "Importando banco de dados..."
+    echo "  ${ARROW} Database file found: ${GREEN}$DB_FILE${NC}"
+    echo "  ${ARROW} Importing database..."
     lando db-import "$DB_FILE"
-    echo "Banco de dados importado com sucesso!"
+    echo "  ${GREEN}${CHECK} Database imported successfully!${NC}"
 else
-    echo "Nenhum arquivo db.sql encontrado em $DB_FILE, ignorando importação do banco."
+    echo "  ${YELLOW}⊙${NC} No database file found at ${YELLOW}$DB_FILE${NC}"
+    echo "  ${YELLOW}⊙${NC} Skipping database import"
 fi
+echo ""
 
-echo "Configuração concluída!"
+# Final message
+echo "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
+echo "${GREEN}║${WHITE}                 ${CHECK} Setup Complete! ${CHECK}                        ${GREEN}║${NC}"
+echo "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo "${WHITE}Your WordPress site is ready at:${NC}"
+echo "${CYAN}${ARROW} $WP_HOME${NC}"
+echo ""
+echo "${WHITE}Useful commands:${NC}"
+echo "  ${YELLOW}lando info${NC}      - View site information"
+echo "  ${YELLOW}lando wp${NC}        - Run WP-CLI commands"
+echo "  ${YELLOW}lando stop${NC}      - Stop the environment"
+echo "  ${YELLOW}lando restart${NC}   - Restart the environment"
+echo ""
+echo "${MAGENTA}Made with ❤️  for the WordPress community${NC}"
+echo ""

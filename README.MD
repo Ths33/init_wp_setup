@@ -1,119 +1,223 @@
-# Automated Setup with Lando
+# 🚀 WordPress Automated Setup with Lando
 
-This document provides instructions to automatically set up a WordPress environment using Lando. The process includes configuring the `.env` and `.lando.yml` files, installing dependencies, downloading WordPress, and importing the database.
+> **Streamline your WordPress development workflow with this automated installation script**
 
-## Requirements
-
--   Lando installed ([Installation Guide](https://docs.lando.dev/getting-started/installation.html))
--   If you have an existing database, it must be placed inside the `db/` folder as `db.sql` for automatic import. If no database is provided, the script will skip the import.
--   The project folder should contain only the `db/` folder and the `db.sql` file before running the script.
-
-## Installing Lando
-
-If you don't have Lando installed, follow the instructions for your operating system:
-
-### Linux
-
-```sh
-wget https://files.lando.dev/installer/lando-x64-stable.deb
-sudo dpkg -i lando-x64-stable.deb
-```
-
-### macOS
-
-```sh
-brew install lando
-```
-
-Or download the `.dmg` installer from [https://github.com/lando/lando/releases](https://github.com/lando/lando/releases)
-
-### Windows
-
-Download the `.exe` installer from [https://github.com/lando/lando/releases](https://github.com/lando/lando/releases)
-
-For more details, visit the [official documentation](https://docs.lando.dev/getting-started/installation.html).
-
-## How to Use
-
-Run the installation script directly from the repository:
-
-```sh
-wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh wp_
-```
-
-Ensure that the project folder contains only `db/` and `db/db.sql` before running the script.
-
-Run the installation script:
-
-```sh
-./install/install.sh wp_
-```
-
-If no `DB_PREFIX` is provided, the script will use `wp_` as the default.
-
-## What the Script Does
-
--   Copies the `.env`, `.lando.yml`, `composer.json`, and `wp-config.php` files
--   Automatically sets values in `.env` (`DB_PREFIX`, `WP_HOME`, `WP_SITEURL`)
--   Updates the project name in `.lando.yml`
--   Starts the Lando environment (`lando start`)
--   Downloads WordPress (`lando wp core download`)
--   Imports the database (`lando db-import db.sql`) if the file exists
+A professional solution to automatically configure WordPress development environments using Lando. This script handles environment configuration, dependency installation, WordPress core download, and database import with zero manual intervention.
 
 ---
 
-# Setup Automatizado com Lando
+## 📋 Table of Contents
 
-Este documento contém instruções para configurar um ambiente WordPress utilizando Lando de forma automatizada. O processo inclui a configuração dos arquivos `.env` e `.lando.yml`, a instalação de dependências, o download do WordPress e a importação do banco de dados.
+-   [Features](#-features)
+-   [Prerequisites](#-prerequisites)
+-   [Installation](#-installation)
+    -   [Installing Lando](#installing-lando)
+-   [Quick Start](#-quick-start)
+-   [Usage](#-usage)
+-   [What Happens Under the Hood](#-what-happens-under-the-hood)
+-   [Project Structure](#-project-structure)
+-   [Troubleshooting](#-troubleshooting)
+-   [Contributing](#-contributing)
+-   [License](#-license)
 
-## Requisitos
+---
 
--   Lando instalado ([Guia de instalação](https://docs.lando.dev/getting-started/installation.html))
--   Caso possua um banco de dados existente, ele deve estar na pasta `db/` com o nome `db.sql` para ser importado automaticamente. Caso contrário, o script não fará a importação.
--   A pasta do projeto deve conter apenas a pasta `db/` e o arquivo `db.sql` antes de rodar o script.
+## ✨ Features
 
-## Instalando o Lando
+-   ✅ **One-Command Setup** - Install everything with a single command
+-   ✅ **Automatic Configuration** - Auto-configures `.env` and `.lando.yml` files
+-   ✅ **Database Import** - Automatically imports existing databases
+-   ✅ **WordPress Core** - Downloads and installs WordPress automatically
+-   ✅ **Dependency Management** - Handles Composer dependencies
+-   ✅ **Project Customization** - Configures project-specific URLs and prefixes
 
-Caso você não tenha o Lando instalado, siga as instruções para o seu sistema operacional:
+---
 
-### Linux
+## 📦 Prerequisites
 
-```sh
+Before running the installation script, ensure you have:
+
+-   **Lando** installed on your system ([Installation Guide](https://docs.lando.dev/getting-started/installation.html))
+-   **Docker** running (required by Lando)
+-   **Internet connection** for downloading dependencies
+-   **(Optional)** Existing database file as `db/db.sql` for import
+
+### Installing Lando
+
+If Lando is not already installed, follow the instructions for your operating system:
+
+#### 🐧 Linux
+
+```bash
 wget https://files.lando.dev/installer/lando-x64-stable.deb
 sudo dpkg -i lando-x64-stable.deb
 ```
 
-### macOS
+#### 🍎 macOS
 
-```sh
+**Using Homebrew (Recommended):**
+
+```bash
 brew install lando
 ```
 
-Ou baixe o instalador `.dmg` em [https://github.com/lando/lando/releases](https://github.com/lando/lando/releases)
+**Manual Installation:**
+Download the `.dmg` installer from [Lando Releases](https://github.com/lando/lando/releases)
 
-### Windows
+#### 🪟 Windows
 
-Baixe o instalador `.exe` em [https://github.com/lando/lando/releases](https://github.com/lando/lando/releases)
+Download the `.exe` installer from [Lando Releases](https://github.com/lando/lando/releases)
 
-Para mais detalhes, visite a [documentação oficial](https://docs.lando.dev/getting-started/installation.html).
+> 💡 **Tip:** For detailed installation instructions and troubleshooting, visit the [official Lando documentation](https://docs.lando.dev/getting-started/installation.html).
 
-## Como usar
+---
 
-Execute o script de instalação diretamente do repositório:
+## ⚡ Quick Start
 
-```sh
+Run this single command in your project directory:
+
+```bash
 wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh wp_
 ```
 
-Certifique-se de que a pasta do projeto contém apenas `db/` e `db/db.sql` antes de rodar o script.
+That's it! The script will handle the rest.
 
-Se nenhum `DB_PREFIX` for fornecido, o script usará `wp_` como padrão.
+---
 
-## O que o script faz
+## 🛠️ Usage
 
--   Copia os arquivos `.env`, `.lando.yml`, `composer.json` e `wp-config.php`
--   Configura automaticamente os valores no `.env` (`DB_PREFIX`, `WP_HOME`, `WP_SITEURL`)
--   Atualiza o nome do projeto no `.lando.yml`
--   Inicia o ambiente Lando (`lando start`)
--   Baixa o WordPress (`lando wp core download`)
--   Importa o banco de dados (`lando db-import db.sql`) se o arquivo existir
+### Basic Installation
+
+```bash
+wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh wp_
+```
+
+### Custom Database Prefix
+
+You can specify a custom database prefix by passing it as an argument:
+
+```bash
+bash install.sh custom_prefix_
+```
+
+If no prefix is provided, the default `wp_` will be used.
+
+### With Existing Database
+
+If you have an existing database:
+
+1. Create a `db/` folder in your project root
+2. Place your database dump as `db/db.sql`
+3. Run the installation script
+
+The script will automatically detect and import the database.
+
+---
+
+## 🔧 What Happens Under the Hood
+
+The installation script performs the following operations:
+
+| Step | Action                     | Description                                                        |
+| ---- | -------------------------- | ------------------------------------------------------------------ |
+| 1️⃣   | **Download Configuration** | Fetches `.env`, `.lando.yml`, `composer.json`, and `wp-config.php` |
+| 2️⃣   | **Environment Setup**      | Configures `DB_PREFIX`, `WP_HOME`, and `WP_SITEURL` in `.env`      |
+| 3️⃣   | **Project Configuration**  | Updates project name in `.lando.yml` based on folder name          |
+| 4️⃣   | **Start Lando**            | Initializes the Lando environment (`lando start`)                  |
+| 5️⃣   | **Install Dependencies**   | Runs `lando composer install`                                      |
+| 6️⃣   | **Download WordPress**     | Executes `lando wp core download`                                  |
+| 7️⃣   | **Import Database**        | Imports `db/db.sql` if present (`lando db-import`)                 |
+
+### Generated URLs
+
+The script automatically generates URLs based on your project folder name:
+
+```
+WP_HOME = https://{project-name}.lndo.site
+WP_SITEURL = https://{project-name}.lndo.site
+```
+
+---
+
+## 📁 Project Structure
+
+After installation, your project will have the following structure:
+
+```
+your-project/
+├── db/
+│   └── db.sql              # Your database dump (optional)
+├── vendor/                 # Composer dependencies
+├── wordpress/              # WordPress core files
+├── .env                    # Environment configuration
+├── .lando.yml             # Lando configuration
+├── composer.json          # PHP dependencies
+├── wp-config.php          # WordPress configuration
+└── install.sh             # Installation script
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Lando not found**
+
+```bash
+# Verify Lando installation
+lando version
+
+# If not found, install Lando following the guide above
+```
+
+**Database import fails**
+
+-   Ensure your database file is located at `db/db.sql`
+-   Check that the SQL file is not corrupted
+-   Verify file permissions: `chmod 644 db/db.sql`
+
+**WordPress not accessible**
+
+-   Ensure Lando is running: `lando info`
+-   Check the generated URL matches your `.env` configuration
+-   Restart Lando: `lando restart`
+
+**Permission denied**
+
+```bash
+# Make the script executable
+chmod +x install.sh
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is open source and available for free use.
+
+---
+
+## 🙏 Acknowledgments
+
+-   Built with [Lando](https://lando.dev)
+-   Powered by [WordPress](https://wordpress.org)
+-   Dependency management via [Composer](https://getcomposer.org)
+
+---
+
+<div align="center">
+Made with ❤️ for the WordPress community
+</div>

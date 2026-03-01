@@ -1,24 +1,55 @@
 name:
 recipe: wordpress
 config:
-    php: "8.4"
+    php: "8.2"
     via: apache
     composer_version: "2"
     webroot: .
     database: mysql
+    xdebug: true
+
+proxy:
+    appserver:
+        - PROXY_URL
 
 services:
+    redis:
+        type: redis:7
+
     appserver:
-        type: php:8.4
-        via: apache
-        webroot: .
         ssl: true
+        build_as_root:
+            - pecl install redis && docker-php-ext-enable redis
+        overrides:
+            environment:
+                PHP_MEMORY_LIMIT: 4G
+                PHP_MAX_EXECUTION_TIME: 1800
+                PHP_MAX_INPUT_TIME: 1800
+                PHP_POST_MAX_SIZE: 4G
+                PHP_UPLOAD_MAX_FILESIZE: 4G
+                PHP_MAX_FILE_UPLOADS: 100
+                PHP_PCRE_BACKTRACK_LIMIT: 10000000
+                PHP_PCRE_RECURSION_LIMIT: 10000000
+                XDEBUG_CONFIG: "start_with_request=yes idekey=VSCODE log=/tmp/xdebug.log"
 
     mailhog:
         type: mailhog
         hogfrom:
             - appserver
+
     pma:
         type: phpmyadmin
         hosts:
             - database
+
+tooling:
+    xdebug-on:
+        service: appserver
+        description: Enable Xdebug
+        cmd: docker-php-ext-enable xdebug && apache2ctl graceful
+        user: root
+    xdebug-off:
+        service: appserver
+        description: Disable Xdebug
+        cmd: rm -f /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && apache2ctl graceful
+        user: root

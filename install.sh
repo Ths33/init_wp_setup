@@ -75,6 +75,7 @@ sed -i "s|WP_SITEURL =.*|WP_SITEURL = \"$WP_SITEURL\"|" "$DEST_DIR/.env"
 
 # Update .lando.yml
 sed -i "1s|^name:.*|name: $PROJECT_NAME|" "$DEST_DIR/.lando.yml"
+sed -i "s|PROXY_URL|${PROJECT_NAME}.lndo.site|" "$DEST_DIR/.lando.yml"
 
 echo -e "  ${GREEN}✓${NC} Project Name: ${CYAN}$PROJECT_NAME${NC}"
 echo -e "  ${GREEN}✓${NC} DB Prefix: ${CYAN}$DB_PREFIX${NC}"

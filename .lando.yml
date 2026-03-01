@@ -19,7 +19,7 @@ services:
     appserver:
         ssl: true
         build_as_root:
-            - (pecl install redis || true) && docker-php-ext-enable redis
+            - php -m | grep -q redis || (pecl install redis && docker-php-ext-enable redis)
         overrides:
             environment:
                 PHP_MEMORY_LIMIT: 4G
@@ -30,7 +30,7 @@ services:
                 PHP_MAX_FILE_UPLOADS: 100
                 PHP_PCRE_BACKTRACK_LIMIT: 10000000
                 PHP_PCRE_RECURSION_LIMIT: 10000000
-                XDEBUG_CONFIG: "start_with_request=yes idekey=VSCODE log=/tmp/xdebug.log"
+                XDEBUG_CONFIG: "start_with_request=trigger idekey=VSCODE"
 
     mailhog:
         type: mailhog

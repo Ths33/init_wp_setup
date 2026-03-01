@@ -13,7 +13,18 @@ NC='\033[0m'
 
 # Repository and files configuration
 REPO_URL="https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main"
-FILES=(".env" ".lando.yml" "composer.json" "wp-config.php")
+CONFIG_FILES=(".env" ".lando.yml" "composer.json" "wp-config.php")
+
+# Set database prefix (default: wp_)
+DB_PREFIX="${1:-wp_}"
+
+# Directory configuration
+DEST_DIR="$(pwd)"
+PROJECT_NAME="$(basename "$DEST_DIR")"
+
+# Define URLs
+WP_HOME="https://${PROJECT_NAME}.lndo.site"
+WP_SITEURL="https://${PROJECT_NAME}.lndo.site"
 
 # Print header
 clear
@@ -23,57 +34,30 @@ echo -e "${CYAN}║${WHITE}     WordPress Automated Setup with Lando ★        
 echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Download required files
+# [1/7] Download configuration files
 echo -e "${BLUE}[1/7]${NC} Downloading configuration files..."
-for file in "${FILES[@]}"; do
-    if [ ! -f "$file" ]; then
+for file in "${CONFIG_FILES[@]}"; do
+    if [ ! -f "$DEST_DIR/$file" ]; then
         echo -e "  ${GRAY}➜${NC} Downloading ${YELLOW}$file${NC}..."
-        wget -q "$REPO_URL/$file" -O "$file"
-        
-        if [ ! -s "$file" ]; then
-            echo -e "  ${RED}✗ FAILED${NC}"
-            echo -e "${RED}Error: File $file could not be downloaded!${NC}"
-            rm -f "$file"
+        wget -q "$REPO_URL/$file" -O "$DEST_DIR/$file"
+
+        if [ ! -s "$DEST_DIR/$file" ]; then
+            echo -e "  ${RED}✗${NC} Failed to download ${YELLOW}$file${NC}"
+            rm -f "$DEST_DIR/$file"
             exit 1
         fi
         echo -e "  ${GREEN}✓${NC} Done"
     else
-        echo -e "  ${GRAY}⊙ File${NC} ${YELLOW}$file${NC} ${GRAY}already exists, skipping...${NC}"
+        echo -e "  ${GRAY}⊙${NC} ${YELLOW}$file${NC} ${GRAY}already exists, skipping...${NC}"
     fi
 done
 echo ""
 
-# Set database prefix (default: wp_)
-DB_PREFIX="${1:-wp_}"
-
-# Directory configuration
-INSTALL_DIR="$(dirname "$0")"
-DEST_DIR="$(pwd)"
-PROJECT_NAME="$(basename "$DEST_DIR")"
-
-# Define URLs
-WP_HOME="https://${PROJECT_NAME}.lndo.site"
-WP_SITEURL="https://${PROJECT_NAME}.lndo.site"
-
-# Copy files if they don't exist in destination
-echo -e "${BLUE}[2/7]${NC} Preparing configuration files..."
-for file in ".env" ".lando.yml" "composer.json" "wp-config.php"; do
-    if [ ! -f "$DEST_DIR/$file" ]; then
-        echo -e "  ${GRAY}➜${NC} Copying ${YELLOW}$file${NC}..."
-        cp "$INSTALL_DIR/$file" "$DEST_DIR"
-    else
-        echo -e "  ${GRAY}⊙ Skipping${NC} ${YELLOW}$file${NC}${GRAY}, already exists${NC}"
-    fi
-done
-echo ""
-
-# Update .env file
-echo -e "${BLUE}[3/7]${NC} Configuring environment variables..."
+# [2/7] Configure environment variables
+echo -e "${BLUE}[2/7]${NC} Configuring environment variables..."
 sed -i "s|DB_PREFIX =.*|DB_PREFIX = \"$DB_PREFIX\"|" "$DEST_DIR/.env"
 sed -i "s|WP_HOME =.*|WP_HOME = \"$WP_HOME\"|" "$DEST_DIR/.env"
 sed -i "s|WP_SITEURL =.*|WP_SITEURL = \"$WP_SITEURL\"|" "$DEST_DIR/.env"
-
-# Update .lando.yml
 sed -i "1s|^name:.*|name: $PROJECT_NAME|" "$DEST_DIR/.lando.yml"
 sed -i "s|PROXY_URL|${PROJECT_NAME}.lndo.site|" "$DEST_DIR/.lando.yml"
 
@@ -82,8 +66,8 @@ echo -e "  ${GREEN}✓${NC} DB Prefix: ${CYAN}$DB_PREFIX${NC}"
 echo -e "  ${GREEN}✓${NC} Site URL: ${CYAN}$WP_HOME${NC}"
 echo ""
 
-# Download WordPress core before Lando start
-echo -e "${BLUE}[4/7]${NC} Downloading WordPress core..."
+# [3/7] Download WordPress core
+echo -e "${BLUE}[3/7]${NC} Downloading WordPress core..."
 if [ ! -f "$DEST_DIR/wp-includes/version.php" ]; then
     echo -e "  ${GRAY}➜${NC} Downloading latest WordPress..."
     wget -q https://wordpress.org/latest.tar.gz -O /tmp/wordpress.tar.gz
@@ -100,19 +84,19 @@ else
 fi
 echo ""
 
-# Start Lando environment
-echo -e "${BLUE}[5/7]${NC} Starting Lando environment..."
+# [4/7] Start Lando environment
+echo -e "${BLUE}[4/7]${NC} Starting Lando environment..."
 echo -e "  ${GRAY}➜ This may take a few minutes on first run${NC}"
 lando start
 echo ""
 
-# Install Composer dependencies
-echo -e "${BLUE}[6/7]${NC} Installing Composer dependencies..."
+# [5/7] Install Composer dependencies
+echo -e "${BLUE}[5/7]${NC} Installing Composer dependencies..."
 lando composer install
 echo ""
 
-# Create .gitignore
-echo -e "${BLUE}[7/8]${NC} Creating .gitignore file..."
+# [6/7] Create .gitignore
+echo -e "${BLUE}[6/7]${NC} Creating .gitignore file..."
 cat > "$DEST_DIR/.gitignore" << 'EOF'
 # Common ignore patterns
 *~
@@ -237,9 +221,9 @@ EOF
 echo -e "  ${GREEN}✓${NC} .gitignore created"
 echo ""
 
-# Import database if exists
+# [7/7] Import database if exists
 DB_FILE="db/db.sql"
-echo -e "${BLUE}[8/8]${NC} Checking for database import..."
+echo -e "${BLUE}[7/7]${NC} Checking for database import..."
 
 if [ -f "$DB_FILE" ]; then
     echo -e "  ${GREEN}➜${NC} Database file found: ${YELLOW}$DB_FILE${NC}"

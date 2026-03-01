@@ -19,7 +19,7 @@ services:
     appserver:
         ssl: true
         build_as_root:
-            - pecl install redis && docker-php-ext-enable redis
+            - (pecl install redis || true) && docker-php-ext-enable redis
         overrides:
             environment:
                 PHP_MEMORY_LIMIT: 4G

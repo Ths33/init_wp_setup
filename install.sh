@@ -82,24 +82,37 @@ echo -e "  ${GREEN}✓${NC} DB Prefix: ${CYAN}$DB_PREFIX${NC}"
 echo -e "  ${GREEN}✓${NC} Site URL: ${CYAN}$WP_HOME${NC}"
 echo ""
 
+# Download WordPress core before Lando start
+echo -e "${BLUE}[4/7]${NC} Downloading WordPress core..."
+if [ ! -f "$DEST_DIR/wp-includes/version.php" ]; then
+    echo -e "  ${GRAY}➜${NC} Downloading latest WordPress..."
+    wget -q https://wordpress.org/latest.tar.gz -O /tmp/wordpress.tar.gz
+    if [ -s /tmp/wordpress.tar.gz ]; then
+        tar -xzf /tmp/wordpress.tar.gz -C "$DEST_DIR" --strip-components=1
+        rm -f /tmp/wordpress.tar.gz
+        echo -e "  ${GREEN}✓${NC} WordPress downloaded"
+    else
+        echo -e "  ${RED}✗${NC} Failed to download WordPress"
+        exit 1
+    fi
+else
+    echo -e "  ${GRAY}⊙${NC} WordPress already installed, skipping..."
+fi
+echo ""
+
 # Start Lando environment
-echo -e "${BLUE}[4/7]${NC} Starting Lando environment..."
+echo -e "${BLUE}[5/7]${NC} Starting Lando environment..."
 echo -e "  ${GRAY}➜ This may take a few minutes on first run${NC}"
 lando start
 echo ""
 
 # Install Composer dependencies
-echo -e "${BLUE}[5/7]${NC} Installing Composer dependencies..."
+echo -e "${BLUE}[6/7]${NC} Installing Composer dependencies..."
 lando composer install
 echo ""
 
-# Download WordPress
-echo -e "${BLUE}[6/7]${NC} Downloading WordPress core..."
-lando wp core download --allow-root
-echo ""
-
 # Create .gitignore
-echo -e "${BLUE}[6.5/7]${NC} Creating .gitignore file..."
+echo -e "${BLUE}[7/8]${NC} Creating .gitignore file..."
 cat > "$DEST_DIR/.gitignore" << 'EOF'
 # Common ignore patterns
 *~
@@ -226,7 +239,7 @@ echo ""
 
 # Import database if exists
 DB_FILE="db/db.sql"
-echo -e "${BLUE}[7/7]${NC} Checking for database import..."
+echo -e "${BLUE}[8/8]${NC} Checking for database import..."
 
 if [ -f "$DB_FILE" ]; then
     echo -e "  ${GREEN}➜${NC} Database file found: ${YELLOW}$DB_FILE${NC}"

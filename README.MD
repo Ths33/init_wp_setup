@@ -45,16 +45,10 @@ brew install lando
 
 ## Fork & configure
 
-This repo is a template. To use it under your own account:
-
-1. Fork or clone this repo to your account.
-2. Edit `install.sh` and replace `<USER>/<REPO>` in `REPO_URL` with your own, **or** pass `REPO_URL` at runtime (see below).
-3. Push.
-
-Generic install one-liner (any fork):
+Default `REPO_URL` points to `Ths33/init_wp_setup`. To use a fork, override at runtime:
 
 ```bash
-REPO_URL=https://raw.githubusercontent.com/<USER>/<REPO>/refs/heads/main \
+REPO_URL=https://raw.githubusercontent.com/Ths33/init_wp_setup/refs/heads/main \
   wget -qO install.sh "$REPO_URL/install.sh" && bash install.sh wp_
 ```
 
@@ -65,7 +59,7 @@ REPO_URL=https://raw.githubusercontent.com/<USER>/<REPO>/refs/heads/main \
 From an empty project directory:
 
 ```bash
-wget -qO install.sh https://raw.githubusercontent.com/<USER>/<REPO>/refs/heads/main/install.sh
+wget -qO install.sh https://raw.githubusercontent.com/Ths33/init_wp_setup/refs/heads/main/install.sh
 bash install.sh wp_
 ```
 
@@ -232,7 +226,7 @@ your-project/
 
 **`lando: command not found`** — Lando not installed or not in `PATH`. Re-check install.
 
-**Download fails** — `REPO_URL` still set to placeholder `<USER>/<REPO>`. Edit `install.sh` or export `REPO_URL`.
+**Download fails** — wrong `REPO_URL`. Default is `Ths33/init_wp_setup`; override `REPO_URL` for a fork.
 
 **DB import fails** — verify `db/db.sql` exists and is valid SQL: `head db/db.sql`. Permissions: `chmod 644 db/db.sql`.
 

@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Source repo holding config files. Override with env var when using a fork:
-#   REPO_URL=https://raw.githubusercontent.com/<user>/<repo>/refs/heads/main bash install.sh
-REPO_URL="${REPO_URL:-https://raw.githubusercontent.com/<USER>/<REPO>/refs/heads/main}"
+#   REPO_URL=https://raw.githubusercontent.com/Ths33/init_wp_setup/refs/heads/main bash install.sh
+REPO_URL="${REPO_URL:-https://raw.githubusercontent.com/Ths33/init_wp_setup/refs/heads/main}"
 
 CONFIG_FILES=(".env" ".lando.yml" "composer.json" "wp-config.php")
 
@@ -15,10 +15,6 @@ WP_SITEURL="$WP_HOME"
 
 log()  { printf '[%s] %s\n' "$1" "$2"; }
 fail() { printf 'ERROR: %s\n' "$1" >&2; exit 1; }
-
-if [[ "$REPO_URL" == *"<USER>"* ]]; then
-    fail "REPO_URL not configured. Edit install.sh or run: REPO_URL=<your-fork-raw-url> bash install.sh"
-fi
 
 # [1/7] Download configuration files
 log "1/7" "Downloading configuration files"

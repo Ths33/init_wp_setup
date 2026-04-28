@@ -1,55 +1,54 @@
 name:
 recipe: wordpress
 config:
-    php: "8.2"
-    via: apache
-    composer_version: "2"
-    webroot: .
-    database: mysql
-    xdebug: true
+  php: "8.2"
+  via: apache
+  composer_version: "2"
+  webroot: .
+  database: mysql
+  xdebug: false
 
 proxy:
-    appserver:
-        - PROXY_URL
+  appserver:
+    - PROXY_URL
 
 services:
-    redis:
-        type: redis:7
+  redis:
+    type: redis:7
 
-    appserver:
-        ssl: true
-        build_as_root:
-            - php -m | grep -q redis || (pecl install redis && docker-php-ext-enable redis)
-        overrides:
-            environment:
-                PHP_MEMORY_LIMIT: 4G
-                PHP_MAX_EXECUTION_TIME: 1800
-                PHP_MAX_INPUT_TIME: 1800
-                PHP_POST_MAX_SIZE: 4G
-                PHP_UPLOAD_MAX_FILESIZE: 4G
-                PHP_MAX_FILE_UPLOADS: 100
-                PHP_PCRE_BACKTRACK_LIMIT: 10000000
-                PHP_PCRE_RECURSION_LIMIT: 10000000
-                XDEBUG_CONFIG: "start_with_request=trigger idekey=VSCODE"
+  appserver:
+    ssl: true
+    build_as_root:
+      - php -m | grep -q redis || (pecl install redis && docker-php-ext-enable redis)
+    overrides:
+      environment:
+        XDEBUG_MODE: "debug,develop"
+        XDEBUG_SESSION: "VSCODE"
+        XDEBUG_CONFIG: "client_host=host.docker.internal client_port=9003 start_with_request=trigger idekey=VSCODE log=/tmp/xdebug.log discover_client_host=0"
 
-    mailhog:
-        type: mailhog
-        hogfrom:
-            - appserver
+  mailhog:
+    type: mailhog
+    hogfrom:
+      - appserver
 
-    pma:
-        type: phpmyadmin
-        hosts:
-            - database
+  pma:
+    type: phpmyadmin
+    hosts:
+      - database
 
 tooling:
-    xdebug-on:
-        service: appserver
-        description: Enable Xdebug
-        cmd: docker-php-ext-enable xdebug && apache2ctl graceful
-        user: root
-    xdebug-off:
-        service: appserver
-        description: Disable Xdebug
-        cmd: rm -f /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && apache2ctl graceful
-        user: root
+  xdebug-on:
+    service: appserver
+    description: Enable Xdebug (step debugging on port 9003)
+    cmd: docker-php-ext-enable xdebug && apache2ctl graceful && echo "Xdebug enabled"
+    user: root
+  xdebug-off:
+    service: appserver
+    description: Disable Xdebug
+    cmd: rm -f /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && apache2ctl graceful && echo "Xdebug disabled"
+    user: root
+  xdebug-log:
+    service: appserver
+    description: Tail Xdebug log
+    cmd: tail -f /tmp/xdebug.log
+    user: root

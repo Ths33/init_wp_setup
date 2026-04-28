@@ -1,114 +1,79 @@
-#!/bin/zsh
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-GRAY='\033[0;90m'
-NC='\033[0m'
+# Source repo holding config files. Override with env var when using a fork:
+#   REPO_URL=https://raw.githubusercontent.com/<user>/<repo>/refs/heads/main bash install.sh
+REPO_URL="${REPO_URL:-https://raw.githubusercontent.com/<USER>/<REPO>/refs/heads/main}"
 
-# Repository and files configuration
-REPO_URL="https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main"
 CONFIG_FILES=(".env" ".lando.yml" "composer.json" "wp-config.php")
 
-# Set database prefix (default: wp_)
 DB_PREFIX="${1:-wp_}"
-
-# Directory configuration
 DEST_DIR="$(pwd)"
 PROJECT_NAME="$(basename "$DEST_DIR")"
-
-# Define URLs
 WP_HOME="https://${PROJECT_NAME}.lndo.site"
-WP_SITEURL="https://${PROJECT_NAME}.lndo.site"
+WP_SITEURL="$WP_HOME"
 
-# Print header
-clear
-echo ""
-echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║${WHITE}     WordPress Automated Setup with Lando ★               ${CYAN}║${NC}"
-echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
-echo ""
+log()  { printf '[%s] %s\n' "$1" "$2"; }
+fail() { printf 'ERROR: %s\n' "$1" >&2; exit 1; }
+
+if [[ "$REPO_URL" == *"<USER>"* ]]; then
+    fail "REPO_URL not configured. Edit install.sh or run: REPO_URL=<your-fork-raw-url> bash install.sh"
+fi
 
 # [1/7] Download configuration files
-echo -e "${BLUE}[1/7]${NC} Downloading configuration files..."
+log "1/7" "Downloading configuration files"
 for file in "${CONFIG_FILES[@]}"; do
-    if [ ! -f "$DEST_DIR/$file" ]; then
-        echo -e "  ${GRAY}➜${NC} Downloading ${YELLOW}$file${NC}..."
-        wget -q "$REPO_URL/$file" -O "$DEST_DIR/$file"
-
-        if [ ! -s "$DEST_DIR/$file" ]; then
-            echo -e "  ${RED}✗${NC} Failed to download ${YELLOW}$file${NC}"
-            rm -f "$DEST_DIR/$file"
-            exit 1
-        fi
-        echo -e "  ${GREEN}✓${NC} Done"
-    else
-        echo -e "  ${GRAY}⊙${NC} ${YELLOW}$file${NC} ${GRAY}already exists, skipping...${NC}"
+    if [ -f "$DEST_DIR/$file" ]; then
+        log "  -" "$file exists, skipping"
+        continue
     fi
+    log "  +" "fetching $file"
+    wget -q "$REPO_URL/$file" -O "$DEST_DIR/$file"
+    [ -s "$DEST_DIR/$file" ] || { rm -f "$DEST_DIR/$file"; fail "download failed: $file"; }
 done
-echo ""
 
-# [2/7] Configure environment variables
-echo -e "${BLUE}[2/7]${NC} Configuring environment variables..."
+# [2/7] Configure environment
+log "2/7" "Configuring environment"
 sed -i "s|DB_PREFIX =.*|DB_PREFIX = \"$DB_PREFIX\"|" "$DEST_DIR/.env"
 sed -i "s|WP_HOME =.*|WP_HOME = \"$WP_HOME\"|" "$DEST_DIR/.env"
 sed -i "s|WP_SITEURL =.*|WP_SITEURL = \"$WP_SITEURL\"|" "$DEST_DIR/.env"
 sed -i "1s|^name:.*|name: $PROJECT_NAME|" "$DEST_DIR/.lando.yml"
 sed -i "s|PROXY_URL|${PROJECT_NAME}.lndo.site|" "$DEST_DIR/.lando.yml"
+log "  =" "project=$PROJECT_NAME prefix=$DB_PREFIX url=$WP_HOME"
 
-echo -e "  ${GREEN}✓${NC} Project Name: ${CYAN}$PROJECT_NAME${NC}"
-echo -e "  ${GREEN}✓${NC} DB Prefix: ${CYAN}$DB_PREFIX${NC}"
-echo -e "  ${GREEN}✓${NC} Site URL: ${CYAN}$WP_HOME${NC}"
-echo ""
-
-# [3/7] Download WordPress core
-echo -e "${BLUE}[3/7]${NC} Downloading WordPress core..."
+# [3/7] WordPress core
+log "3/7" "Downloading WordPress core"
 if [ ! -f "$DEST_DIR/wp-includes/version.php" ]; then
-    echo -e "  ${GRAY}➜${NC} Downloading latest WordPress..."
     wget -q https://wordpress.org/latest.tar.gz -O /tmp/wordpress.tar.gz
-    if [ -s /tmp/wordpress.tar.gz ]; then
-        tar -xzf /tmp/wordpress.tar.gz -C "$DEST_DIR" --strip-components=1
-        rm -f /tmp/wordpress.tar.gz
-        echo -e "  ${GREEN}✓${NC} WordPress downloaded"
-    else
-        echo -e "  ${RED}✗${NC} Failed to download WordPress"
-        exit 1
-    fi
+    [ -s /tmp/wordpress.tar.gz ] || fail "WordPress download failed"
+    tar -xzf /tmp/wordpress.tar.gz -C "$DEST_DIR" --strip-components=1
+    rm -f /tmp/wordpress.tar.gz
 else
-    echo -e "  ${GRAY}⊙${NC} WordPress already installed, skipping..."
+    log "  -" "already present, skipping"
 fi
-echo ""
 
-# [4/7] Start Lando environment
-echo -e "${BLUE}[4/7]${NC} Starting Lando environment..."
-echo -e "  ${GRAY}➜ This may take a few minutes on first run${NC}"
+# [4/7] Lando
+log "4/7" "Starting Lando (first run takes minutes)"
 lando start
-echo ""
 
-# [5/7] Install Composer dependencies
-echo -e "${BLUE}[5/7]${NC} Installing Composer dependencies..."
+# [5/7] Composer
+log "5/7" "Installing Composer dependencies"
 lando composer install
-echo ""
 
-# [6/7] Create .gitignore
-echo -e "${BLUE}[6/7]${NC} Creating .gitignore file..."
+# [6/7] .gitignore
+log "6/7" "Writing .gitignore"
 cat > "$DEST_DIR/.gitignore" << 'EOF'
-# Common ignore patterns
+# Editor / OS
 *~
-.github
 .DS_Store
 .svn
 .cvs
 *.bak
 *.swp
 Thumbs.db
+.github
 
-# WP Engine Specific
+# WP Engine
 .smushit-status
 _wpeprivate
 /wp-content/drop-ins/
@@ -126,14 +91,10 @@ _wpeprivate
 /wp-content/mu-plugins/wpe-wp-sign-on-plugin*
 /wp-content/plugins/upload_redirect
 
-### WordPress Core (as of WordPress 6.8.2)
-#
-# Critical for security, should NEVER be committed
+# WordPress core
 wp-config.php
-# Directories
 /wp-admin/
 /wp-includes/
-# Files in the root directory
 /index.php
 /license.txt
 /readme.html
@@ -150,14 +111,11 @@ wp-config.php
 /wp-signup.php
 /wp-trackback.php
 /xmlrpc.php
-# Default Themes
 /wp-content/themes/index.php
 /wp-content/themes/twentytwenty*
-# Default Plugins
 /wp-content/plugins/index.php
 /wp-content/plugins/hello.php
 /wp-content/plugins/akismet/
-# WordPress Content and Cache
 /wp-content/advanced-cache.php
 /wp-content/backup-db/
 /wp-content/blogs.dir/
@@ -170,8 +128,7 @@ wp-config.php
 /wp-content/uploads/
 /wp-content/wp-cache-config.php
 
-# large/disallowed file types
-# a CDN should be used for these
+# Heavy media (use a CDN)
 *.hqx
 *.bin
 *.exe
@@ -205,7 +162,7 @@ wp-config.php
 *.wmv
 *.avi
 
-# Development env setup
+# Local env
 .env
 .lando.yml
 composer.json
@@ -218,37 +175,25 @@ db
 wp-content/debug.log
 wp-content/jetpack-waf
 EOF
-echo -e "  ${GREEN}✓${NC} .gitignore created"
-echo ""
 
-# [7/7] Import database if exists
+# [7/7] Database import
 DB_FILE="db/db.sql"
-echo -e "${BLUE}[7/7]${NC} Checking for database import..."
-
+log "7/7" "Database import"
 if [ -f "$DB_FILE" ]; then
-    echo -e "  ${GREEN}➜${NC} Database file found: ${YELLOW}$DB_FILE${NC}"
-    echo -e "  ${GRAY}➜${NC} Importing database..."
     lando db-import "$DB_FILE"
-    echo -e "  ${GREEN}✓${NC} Database imported successfully!"
+    log "  =" "imported $DB_FILE"
 else
-    echo -e "  ${YELLOW}⊙${NC} No database file found at ${GRAY}$DB_FILE${NC}"
-    echo -e "  ${YELLOW}⊙${NC} Skipping database import"
+    log "  -" "no $DB_FILE, skipping"
 fi
-echo ""
 
-# Final message
-echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║${WHITE}                 ✓ Setup Complete! ✓                        ${GREEN}║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "${WHITE}Your WordPress site is ready at:${NC}"
-echo -e "${CYAN}➜ $WP_HOME${NC}"
-echo ""
-echo -e "${WHITE}Useful commands:${NC}"
-echo -e "  ${YELLOW}lando info${NC}      ${GRAY}- View site information${NC}"
-echo -e "  ${YELLOW}lando wp${NC}        ${GRAY}- Run WP-CLI commands${NC}"
-echo -e "  ${YELLOW}lando stop${NC}      ${GRAY}- Stop the environment${NC}"
-echo -e "  ${YELLOW}lando restart${NC}   ${GRAY}- Restart the environment${NC}"
-echo ""
-echo -e "${MAGENTA}Made with ❤️  for the WordPress community${NC}"
-echo ""
+echo
+echo "Setup complete: $WP_HOME"
+echo
+echo "Useful commands:"
+echo "  lando info        - environment info"
+echo "  lando wp <cmd>    - WP-CLI"
+echo "  lando composer    - Composer in container"
+echo "  lando xdebug-on   - enable Xdebug"
+echo "  lando xdebug-off  - disable Xdebug"
+echo "  lando stop        - stop"
+echo "  lando restart     - restart"

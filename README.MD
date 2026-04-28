@@ -1,223 +1,243 @@
-# 🚀 WordPress Automated Setup with Lando
+# WordPress Automated Setup with Lando
 
-> **Streamline your WordPress development workflow with this automated installation script**
-
-A professional solution to automatically configure WordPress development environments using Lando. This script handles environment configuration, dependency installation, WordPress core download, and database import with zero manual intervention.
+One-shot bootstrap for a local WordPress dev environment using [Lando](https://lando.dev). Fetches config files, installs WP core + Composer deps, starts containers, optionally imports a DB dump.
 
 ---
 
-## 📋 Table of Contents
+## Contents
 
--   [Features](#-features)
--   [Prerequisites](#-prerequisites)
--   [Installation](#-installation)
-    -   [Installing Lando](#installing-lando)
--   [Quick Start](#-quick-start)
--   [Usage](#-usage)
--   [What Happens Under the Hood](#-what-happens-under-the-hood)
--   [Project Structure](#-project-structure)
--   [Troubleshooting](#-troubleshooting)
--   [Contributing](#-contributing)
--   [License](#-license)
+- [Prerequisites](#prerequisites)
+- [Fork & configure](#fork--configure)
+- [Quick start](#quick-start)
+- [What it does](#what-it-does)
+- [Usage](#usage)
+- [Composer](#composer)
+- [Xdebug](#xdebug)
+- [PHP tunables](#php-tunables)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## ✨ Features
+## Prerequisites
 
--   ✅ **One-Command Setup** - Install everything with a single command
--   ✅ **Automatic Configuration** - Auto-configures `.env` and `.lando.yml` files
--   ✅ **Database Import** - Automatically imports existing databases
--   ✅ **WordPress Core** - Downloads and installs WordPress automatically
--   ✅ **Dependency Management** - Handles Composer dependencies
--   ✅ **Project Customization** - Configures project-specific URLs and prefixes
+- [Lando](https://docs.lando.dev/getting-started/installation.html) (Docker under the hood)
+- `wget`, `bash`
+- (Optional) DB dump at `db/db.sql`
 
----
+### Install Lando
 
-## 📦 Prerequisites
-
-Before running the installation script, ensure you have:
-
--   **Lando** installed on your system ([Installation Guide](https://docs.lando.dev/getting-started/installation.html))
--   **Docker** running (required by Lando)
--   **Internet connection** for downloading dependencies
--   **(Optional)** Existing database file as `db/db.sql` for import
-
-### Installing Lando
-
-If Lando is not already installed, follow the instructions for your operating system:
-
-#### 🐧 Linux
+**Linux**
 
 ```bash
 wget https://files.lando.dev/installer/lando-x64-stable.deb
 sudo dpkg -i lando-x64-stable.deb
 ```
 
-#### 🍎 macOS
-
-**Using Homebrew (Recommended):**
+**macOS**
 
 ```bash
 brew install lando
 ```
 
-**Manual Installation:**
-Download the `.dmg` installer from [Lando Releases](https://github.com/lando/lando/releases)
-
-#### 🪟 Windows
-
-Download the `.exe` installer from [Lando Releases](https://github.com/lando/lando/releases)
-
-> 💡 **Tip:** For detailed installation instructions and troubleshooting, visit the [official Lando documentation](https://docs.lando.dev/getting-started/installation.html).
+**Windows** — download the `.exe` from [Lando releases](https://github.com/lando/lando/releases).
 
 ---
 
-## ⚡ Quick Start
+## Fork & configure
 
-Run this single command in your project directory:
+This repo is a template. To use it under your own account:
+
+1. Fork or clone this repo to your account.
+2. Edit `install.sh` and replace `<USER>/<REPO>` in `REPO_URL` with your own, **or** pass `REPO_URL` at runtime (see below).
+3. Push.
+
+Generic install one-liner (any fork):
 
 ```bash
-wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh wp_
+REPO_URL=https://raw.githubusercontent.com/<USER>/<REPO>/refs/heads/main \
+  wget -qO install.sh "$REPO_URL/install.sh" && bash install.sh wp_
 ```
-
-That's it! The script will handle the rest.
 
 ---
 
-## 🛠️ Usage
+## Quick start
 
-### Basic Installation
+From an empty project directory:
 
 ```bash
-wget -qO install.sh https://raw.githubusercontent.com/tales-bluecrocus/init_setup/refs/heads/main/install.sh && bash install.sh wp_
+wget -qO install.sh https://raw.githubusercontent.com/<USER>/<REPO>/refs/heads/main/install.sh
+bash install.sh wp_
 ```
 
-### Custom Database Prefix
+Project URL is derived from folder name: `https://<folder-name>.lndo.site`.
 
-You can specify a custom database prefix by passing it as an argument:
+---
+
+## What it does
+
+| Step | Action                                                          |
+| ---- | --------------------------------------------------------------- |
+| 1    | Download `.env`, `.lando.yml`, `composer.json`, `wp-config.php` |
+| 2    | Patch `.env` and `.lando.yml` with project name + DB prefix     |
+| 3    | Download latest WordPress core into project root                |
+| 4    | `lando start` (builds containers, installs Redis ext)           |
+| 5    | `lando composer install`                                        |
+| 6    | Write a sane `.gitignore`                                       |
+| 7    | Import `db/db.sql` if present                                   |
+
+---
+
+## Usage
+
+### Default DB prefix
 
 ```bash
-bash install.sh custom_prefix_
+bash install.sh         # defaults to wp_
 ```
 
-If no prefix is provided, the default `wp_` will be used.
+### Custom DB prefix
 
-### With Existing Database
-
-If you have an existing database:
-
-1. Create a `db/` folder in your project root
-2. Place your database dump as `db/db.sql`
-3. Run the installation script
-
-The script will automatically detect and import the database.
-
----
-
-## 🔧 What Happens Under the Hood
-
-The installation script performs the following operations:
-
-| Step | Action                     | Description                                                        |
-| ---- | -------------------------- | ------------------------------------------------------------------ |
-| 1️⃣   | **Download Configuration** | Fetches `.env`, `.lando.yml`, `composer.json`, and `wp-config.php` |
-| 2️⃣   | **Environment Setup**      | Configures `DB_PREFIX`, `WP_HOME`, and `WP_SITEURL` in `.env`      |
-| 3️⃣   | **Project Configuration**  | Updates project name in `.lando.yml` based on folder name          |
-| 4️⃣   | **Start Lando**            | Initializes the Lando environment (`lando start`)                  |
-| 5️⃣   | **Install Dependencies**   | Runs `lando composer install`                                      |
-| 6️⃣   | **Download WordPress**     | Executes `lando wp core download`                                  |
-| 7️⃣   | **Import Database**        | Imports `db/db.sql` if present (`lando db-import`)                 |
-
-### Generated URLs
-
-The script automatically generates URLs based on your project folder name:
-
+```bash
+bash install.sh myprefix_
 ```
-WP_HOME = https://{project-name}.lndo.site
-WP_SITEURL = https://{project-name}.lndo.site
+
+### Existing database
+
+Drop your dump at `db/db.sql` before running. Script auto-imports it.
+
+### Common Lando commands
+
+```bash
+lando info              # URLs, services, ports
+lando wp <subcmd>       # WP-CLI inside container, e.g. lando wp plugin list
+lando db-import file    # import a SQL dump
+lando db-export         # export DB
+lando ssh               # shell into appserver
+lando logs -f           # follow logs
+lando restart           # restart all services
+lando stop              # stop all services
+lando rebuild -y        # rebuild after .lando.yml changes
 ```
 
 ---
 
-## 📁 Project Structure
+## Composer
 
-After installation, your project will have the following structure:
+Composer runs inside the container, no host PHP required.
+
+```bash
+lando composer install              # install deps (.lock or .json)
+lando composer require <pkg>        # add a dependency
+lando composer require --dev <pkg>  # dev dependency
+lando composer update               # update all
+lando composer update <pkg>         # update one package
+lando composer dump-autoload        # rebuild autoloader
+```
+
+`vendor/autoload.php` is required in `wp-config.php` to load `phpdotenv` (which reads `.env`). Add your own packages and use them in themes/plugins via the same autoloader.
+
+---
+
+## Xdebug
+
+Configured for **step debugging** on port `9003` with VSCode.
+
+### Enable / disable
+
+```bash
+lando xdebug-on         # enable extension and reload Apache
+lando xdebug-off        # disable
+lando xdebug-log        # tail /tmp/xdebug.log inside container
+```
+
+Xdebug runs in **trigger** mode — only attaches when the request carries `XDEBUG_SESSION=VSCODE` (cookie, GET, or POST). Use the [Xdebug Helper](https://chromewebstore.google.com/detail/xdebug-helper/eadndfjplgieldjbigjakmdgkmoaaaoc) browser extension or set the cookie manually.
+
+### VSCode `.vscode/launch.json`
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Listen for Xdebug (Lando)",
+      "type": "php",
+      "request": "launch",
+      "port": 9003,
+      "pathMappings": {
+        "/app": "${workspaceFolder}"
+      }
+    }
+  ]
+}
+```
+
+### Notes
+
+- Containers see the host as `host.docker.internal` (Lando aliases this on Linux too).
+- `discover_client_host=0` — explicit `client_host` is more reliable than discovery on Lando.
+- If the IDE doesn't break, run `lando xdebug-log` and confirm a connection attempt appears.
+
+---
+
+## PHP tunables
+
+Lando defaults are fine for most cases. If you need bigger uploads, longer execution, or more memory (large imports, heavy plugins), add to `.lando.yml` under `services.appserver.overrides.environment`:
+
+```yaml
+overrides:
+  environment:
+    PHP_MEMORY_LIMIT: 512M
+    PHP_MAX_EXECUTION_TIME: 600
+    PHP_MAX_INPUT_TIME: 600
+    PHP_POST_MAX_SIZE: 256M
+    PHP_UPLOAD_MAX_FILESIZE: 256M
+    PHP_MAX_FILE_UPLOADS: 50
+    PHP_PCRE_BACKTRACK_LIMIT: 1000000
+    PHP_PCRE_RECURSION_LIMIT: 1000000
+```
+
+| Var                        | Default | When to bump                              |
+| -------------------------- | ------- | ----------------------------------------- |
+| `PHP_MEMORY_LIMIT`         | 128M    | Heavy plugins, page builders, big imports |
+| `PHP_MAX_EXECUTION_TIME`   | 30      | Long-running imports/migrations           |
+| `PHP_MAX_INPUT_TIME`       | 60      | Large form submissions                    |
+| `PHP_POST_MAX_SIZE`        | 8M      | Large media/form uploads                  |
+| `PHP_UPLOAD_MAX_FILESIZE`  | 2M      | Large media uploads                       |
+| `PHP_MAX_FILE_UPLOADS`     | 20      | Bulk media uploads                        |
+| `PHP_PCRE_BACKTRACK_LIMIT` | 1M      | Complex regex (large content blocks)      |
+| `PHP_PCRE_RECURSION_LIMIT` | 100K    | Deep regex recursion errors               |
+
+After editing run `lando rebuild -y`.
+
+---
+
+## Project structure after install
 
 ```
 your-project/
-├── db/
-│   └── db.sql              # Your database dump (optional)
-├── vendor/                 # Composer dependencies
-├── wordpress/              # WordPress core files
-├── .env                    # Environment configuration
-├── .lando.yml             # Lando configuration
-├── composer.json          # PHP dependencies
-├── wp-config.php          # WordPress configuration
-└── install.sh             # Installation script
+├── db/db.sql              # optional dump, auto-imported
+├── vendor/                # composer deps
+├── wp-admin/  wp-includes/  wp-content/
+├── .env                   # DB creds, URLs, prefix
+├── .lando.yml             # services + tooling
+├── .gitignore
+├── composer.json
+├── wp-config.php
+└── install.sh
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Common Issues
+**`lando: command not found`** — Lando not installed or not in `PATH`. Re-check install.
 
-**Lando not found**
+**Download fails** — `REPO_URL` still set to placeholder `<USER>/<REPO>`. Edit `install.sh` or export `REPO_URL`.
 
-```bash
-# Verify Lando installation
-lando version
+**DB import fails** — verify `db/db.sql` exists and is valid SQL: `head db/db.sql`. Permissions: `chmod 644 db/db.sql`.
 
-# If not found, install Lando following the guide above
-```
+**Site not loading** — `lando info` to confirm URL; trust the SSL cert (`lando ca-cert`); check `/etc/hosts` is not stale.
 
-**Database import fails**
+**Xdebug not breaking** — trigger mode requires `XDEBUG_SESSION` cookie/param. Confirm port 9003 free on host: `lsof -i :9003`. Check `lando xdebug-log`.
 
--   Ensure your database file is located at `db/db.sql`
--   Check that the SQL file is not corrupted
--   Verify file permissions: `chmod 644 db/db.sql`
-
-**WordPress not accessible**
-
--   Ensure Lando is running: `lando info`
--   Check the generated URL matches your `.env` configuration
--   Restart Lando: `lando restart`
-
-**Permission denied**
-
-```bash
-# Make the script executable
-chmod +x install.sh
-```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is open source and available for free use.
-
----
-
-## 🙏 Acknowledgments
-
--   Built with [Lando](https://lando.dev)
--   Powered by [WordPress](https://wordpress.org)
--   Dependency management via [Composer](https://getcomposer.org)
-
----
-
-<div align="center">
-Made with ❤️ for the WordPress community
-</div>
+**Permission denied on script** — `chmod +x install.sh`.

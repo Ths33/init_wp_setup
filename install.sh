@@ -16,6 +16,40 @@ WP_SITEURL="$WP_HOME"
 log()  { printf '[%s] %s\n' "$1" "$2"; }
 fail() { printf 'ERROR: %s\n' "$1" >&2; exit 1; }
 
+# ---------- Portability shim: detect OS + tools, expose uniform helpers ----------
+# Goal: same script on Ubuntu (GNU coreutils/sed) and macOS (BSD coreutils/sed)
+# without requiring `gnu-sed`/`gsed` or any extra Homebrew packages.
+
+case "$(uname -s)" in
+    Linux*)   OS="linux";   OS_LABEL="Linux (GNU)";;
+    Darwin*)  OS="macos";   OS_LABEL="macOS (BSD)";;
+    CYGWIN*|MINGW*|MSYS*) OS="windows"; OS_LABEL="Windows (POSIX shim)";;
+    *)        OS="unknown"; OS_LABEL="$(uname -s)";;
+esac
+
+# Pick downloader by availability, not OS, so brew-installed wget on macOS or
+# a curl-only Ubuntu container both work.
+if command -v curl >/dev/null 2>&1; then
+    DOWNLOADER="curl"
+    fetch() { curl -fsSL "$1" -o "$2"; }
+elif command -v wget >/dev/null 2>&1; then
+    DOWNLOADER="wget"
+    fetch() { wget -q "$1" -O "$2"; }
+else
+    fail "neither curl nor wget found; install one and retry"
+fi
+
+# In-place sed via temp file — sidesteps the GNU vs BSD `-i` argument mismatch
+# (GNU: `sed -i ...`; BSD: `sed -i '' ...`). One code path, both platforms.
+sed_inplace() {
+    local expr="$1" file="$2" tmp
+    tmp="$(mktemp)"
+    sed "$expr" "$file" > "$tmp" && mv "$tmp" "$file"
+}
+
+log "env" "$OS_LABEL, downloader=$DOWNLOADER"
+# ---------- end portability shim ----------
+
 # [1/7] Download configuration files
 log "1/7" "Downloading configuration files"
 for file in "${CONFIG_FILES[@]}"; do
@@ -24,26 +58,27 @@ for file in "${CONFIG_FILES[@]}"; do
         continue
     fi
     log "  +" "fetching $file"
-    wget -q "$REPO_URL/$file" -O "$DEST_DIR/$file"
+    fetch "$REPO_URL/$file" "$DEST_DIR/$file" || { rm -f "$DEST_DIR/$file"; fail "download failed: $file"; }
     [ -s "$DEST_DIR/$file" ] || { rm -f "$DEST_DIR/$file"; fail "download failed: $file"; }
 done
 
 # [2/7] Configure environment
 log "2/7" "Configuring environment"
-sed -i "s|DB_PREFIX =.*|DB_PREFIX = \"$DB_PREFIX\"|" "$DEST_DIR/.env"
-sed -i "s|WP_HOME =.*|WP_HOME = \"$WP_HOME\"|" "$DEST_DIR/.env"
-sed -i "s|WP_SITEURL =.*|WP_SITEURL = \"$WP_SITEURL\"|" "$DEST_DIR/.env"
-sed -i "1s|^name:.*|name: $PROJECT_NAME|" "$DEST_DIR/.lando.yml"
-sed -i "s|PROXY_URL|${PROJECT_NAME}.lndo.site|" "$DEST_DIR/.lando.yml"
+sed_inplace "s|DB_PREFIX =.*|DB_PREFIX = \"$DB_PREFIX\"|" "$DEST_DIR/.env"
+sed_inplace "s|WP_HOME =.*|WP_HOME = \"$WP_HOME\"|" "$DEST_DIR/.env"
+sed_inplace "s|WP_SITEURL =.*|WP_SITEURL = \"$WP_SITEURL\"|" "$DEST_DIR/.env"
+sed_inplace "1s|^name:.*|name: $PROJECT_NAME|" "$DEST_DIR/.lando.yml"
+sed_inplace "s|PROXY_URL|${PROJECT_NAME}.lndo.site|" "$DEST_DIR/.lando.yml"
 log "  =" "project=$PROJECT_NAME prefix=$DB_PREFIX url=$WP_HOME"
 
 # [3/7] WordPress core
 log "3/7" "Downloading WordPress core"
 if [ ! -f "$DEST_DIR/wp-includes/version.php" ]; then
-    wget -q https://wordpress.org/latest.tar.gz -O /tmp/wordpress.tar.gz
-    [ -s /tmp/wordpress.tar.gz ] || fail "WordPress download failed"
-    tar -xzf /tmp/wordpress.tar.gz -C "$DEST_DIR" --strip-components=1
-    rm -f /tmp/wordpress.tar.gz
+    WP_TARBALL="$(mktemp)"
+    fetch https://wordpress.org/latest.tar.gz "$WP_TARBALL" || fail "WordPress download failed"
+    [ -s "$WP_TARBALL" ] || fail "WordPress download failed"
+    tar -xzf "$WP_TARBALL" -C "$DEST_DIR" --strip-components=1
+    rm -f "$WP_TARBALL"
 else
     log "  -" "already present, skipping"
 fi

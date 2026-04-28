@@ -21,8 +21,10 @@ One-shot bootstrap for a local WordPress dev environment using [Lando](https://l
 ## Prerequisites
 
 - [Lando](https://docs.lando.dev/getting-started/installation.html) (Docker under the hood)
-- `wget`, `bash`
+- `bash` 4+ and one of `curl` / `wget`
 - (Optional) DB dump at `db/db.sql`
+
+Tested on Ubuntu (GNU coreutils/sed) and macOS (BSD coreutils/sed). The installer uses a portable `sed` wrapper and auto-detects `curl` or `wget`, so no extra GNU tools (`gsed`, `gnu-sed`) are required.
 
 ### Install Lando
 
@@ -39,6 +41,8 @@ sudo dpkg -i lando-x64-stable.deb
 brew install lando
 ```
 
+> macOS ships with `curl` but not `wget`; the installer detects this and uses `curl`. No need to `brew install wget` or `gnu-sed`.
+
 **Windows** — download the `.exe` from [Lando releases](https://github.com/lando/lando/releases).
 
 ---
@@ -48,8 +52,10 @@ brew install lando
 Default `REPO_URL` points to `Ths33/init_wp_setup`. To use a fork, override at runtime:
 
 ```bash
-REPO_URL=https://raw.githubusercontent.com/Ths33/init_wp_setup/refs/heads/main \
-  wget -qO install.sh "$REPO_URL/install.sh" && bash install.sh wp_
+REPO_URL=https://raw.githubusercontent.com/Ths33/init_wp_setup/refs/heads/main
+curl -fsSL "$REPO_URL/install.sh" -o install.sh && REPO_URL="$REPO_URL" bash install.sh wp_
+# or, if you prefer wget:
+# wget -qO install.sh "$REPO_URL/install.sh" && REPO_URL="$REPO_URL" bash install.sh wp_
 ```
 
 ---

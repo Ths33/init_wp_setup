@@ -14,7 +14,7 @@ proxy:
 
 services:
   redis:
-    type: redis:7
+    type: redis:8
 
   appserver:
     ssl: true
